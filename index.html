@@ -1,16 +1,17 @@
 <!DOCTYPE html>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 <html>
 <body>
 <style>
 .grid { 
     /* top right bot left */
     /* margin:100px 50px 20px 40px;  */
-    margin:5em 1em 2em 10em; 
+    margin:1em 1em 1em 1em; 
     border-collapse:collapse 
 }
 .grid td {
     cursor:pointer;
-    width:50px; height:50px;
+    width:70px; height:70px;
     border:2px solid #ccc;
     /* text-align:center; */
     /* font-family:sans-serif; font-size:13px */
@@ -23,9 +24,10 @@
 .lake { 
     /* top right bot left */
     /* margin:100px 50px 20px 40px;  */
-    margin:1em 1em 1em 1em; 
+    margin:0em 1em 1em 1em; 
     border-collapse:collapse;
-    float: left;
+    display: inline-block;
+    /* float: right; */
 }
 .lake td {
     /* cursor:pointer; */
@@ -35,35 +37,71 @@
     /* font-family:sans-serif; font-size:13px */
 }
 .lake td.clicked {
-    background-color:	#505050;
-    /* font-weight:bold; color:red; */
+    background-color:#505050;
 }
 .lake td.extra {
     background-color:palevioletred;
-    /* font-weight:bold; color:red; */
 }
 .lake td.missing {
     background-color:palegreen;
-    /* font-weight:bold; color:red; */
 }
+button:hover {
+  background-color: rgb(29, 206, 53);
+}
+button {
+    background-color: rgb(183, 202, 10);
+    width:6em; height:2em;
+}
+
+#info {
+    margin-top: 1em;
+    font-size: large;
+}
+
+#header {
+    margin-top: 1em;
+    font-size: large;
+}
+
 </style>
 
-<p>Click "Try it" to call a function with arguments</p>
+<center>
 
-<p id="demo"></p>
+<p id="header">Input your lake:</p>
 
-<button onclick="solve(user_lake)">Try it</button>
+<p id="input"></p>
+
+<button onclick="solve(user_lake)">Solve!</button>
+
+<p id="info"></p>
 
 <p id="output"></p>
 
+</center>
+
 <script>
+var MOUSEDOWN = 0;
+let empty_lake = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]];
+
 var user_lake = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]];
 var grid = clickableGrid(5,5);
 
-document.getElementById("demo").appendChild(grid);
+document.getElementById("input").appendChild(grid);
 
-function handleClick(cell, r, c, i) {
-    // console.log("You clicked on item #:",r);
+function eventClickHandler(cell, r, c, i) {
+    return function() {
+        handleClick(cell, r, c, i)
+    }
+}
+
+function handleHover(event) {
+    if (!MOUSEDOWN) {
+        return
+    }
+    event.preventDefault();
+    var cell = event.target
+    var r = cell.r
+    var c = cell.c
     if (cell.className === 'clicked') {
         cell.className = ''
         user_lake[r][c] = 0;
@@ -72,39 +110,49 @@ function handleClick(cell, r, c, i) {
         cell.className = 'clicked'
         user_lake[r][c] = 1;
     }
-    // console.log(cell.className)
-    // console.log(JSON.stringify(user_lake))
 }
 
-function eventClickHandler(cell, r, c, i) {
-    return function() {
-        handleClick(cell, r, c, i)
-    }
+function handleExit(event) {
+    MOUSEDOWN = 0;
+}
+
+function startClick(event) {
+    MOUSEDOWN = 1;
+    handleHover(event);
+}
+
+function endClick(event) {
+    MOUSEDOWN = 0;
 }
 
 function clickableGrid(rows, cols) {
-    var i=0;
     var grid = document.createElement('table');
     grid.className = 'grid';
     for (var r=0;r<rows;++r){
         var tr = grid.appendChild(document.createElement('tr'));
         for (var c=0;c<cols;++c){
             var cell = tr.appendChild(document.createElement('td'));
-            i += 1;
-            // cell.innerHTML = ++i;
-            cell.addEventListener(
-                'click',
-                eventClickHandler(cell, r, c, i),
-                false
-            );
+            cell.r = r;
+            cell.c = c;
+            cell.className = '';
+            cell.onmouseenter = handleHover
+            cell.onmouseup = endClick
+            cell.onmousedown = startClick
+            // cell.addEventListener(
+            //     'mousedown',
+            //     startClick,
+            //     false
+            // );
         }
     }
+    grid.onmouseleave = handleExit
     return grid;
 }
 
 function drawLake(lake) {
     var grid = document.createElement('table');
     grid.className = 'lake';
+    var swap_count = 0;
     for (var r=0;r<5;++r){
         var tr = grid.appendChild(document.createElement('tr'));
         for (var c=0;c<5;++c){
@@ -113,21 +161,16 @@ function drawLake(lake) {
                 cell.className = 'clicked'
             }
             if (lake[r][c] == 2) {
+                swap_count++;
                 cell.className = 'extra'
             }
             if (lake[r][c] == 3) {
                 cell.className = 'missing'
             }
-            // cell.addEventListener(
-            //     'click',
-            //     eventClickHandler(cell, r, c, i),
-            //     false
-            // );
         }
     }
     document.getElementById("output").appendChild(grid);
-    // document.getElementById("demo").appendChild(grid.cloneNode(true));
-    return grid;
+    return swap_count;
 }
 
 function drawDiff(current_lake, goal_lake) {
@@ -147,28 +190,22 @@ function drawDiff(current_lake, goal_lake) {
             }
         }
     }
-    drawLake(annotated_lake);
+    return drawLake(annotated_lake);
 }
 
 function solve(user_lake) {
     var closest_lakes = findClosestMatch(user_lake)
-    console.log(closest_lakes.length)
-    // document.getElementById("output").replaceChild();
     while (document.getElementById("output").hasChildNodes()) {
         document.getElementById("output").removeChild(document.getElementById("output").firstChild);
     }
-    for (var i = 0; i<Math.min(closest_lakes.length,5);i++) {
-        drawDiff(user_lake, closest_lakes[i])
-        // drawLake(closest_lakes[i])
+    var swap_count = 0;
+    var num_closest = closest_lakes.length;
+    for (var i = 0; i<Math.min(num_closest,15);i++) {
+        swap_count = drawDiff(user_lake, closest_lakes[i])
     }
-}
-
-
-let empty_lake = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]];
-
-let x = 5;
-function myFunction(name,job) {
-  document.getElementById("demo").innerHTML = "Welcome " + name + ", the " + job + ".";
+    var l = (num_closest == 1 ? " lake " : " lakes ");
+    var s = (swap_count == 1 ? " swap." : " swaps.");
+    document.getElementById("info").innerHTML="Found "+num_closest+" best"+l+"within "+swap_count+s
 }
 
 function rotateLake(lake) {
@@ -281,7 +318,7 @@ function findClosestMatch(current_lake) {
             output.push(template_lake)
         }   
     }
-    console.log(best_distance)
+    // console.log(best_distance)
     return output
 }
 
